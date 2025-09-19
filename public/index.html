@@ -58,7 +58,7 @@
             <span id="status-message">Loading...</span>
         </div>
         
-        <!-- UI Message Box -->
+        <!-- UI Message Box to replace window.alert() -->
         <div id="message-box" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
             <div class="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full">
                 <p id="message-content" class="text-center text-lg font-semibold text-gray-800 mb-4"></p>
@@ -236,16 +236,16 @@
                     auth = getAuth(app);
                     db = getFirestore(app);
 
-                    // Sign in with custom token or anonymously
+                    // Listen for authentication state changes and handle user login.
                     onAuthStateChanged(auth, async (user) => {
                         if (user) {
                             userId = user.uid;
                             userInfoDiv.classList.remove('hidden');
                             userIdSpan.textContent = userId;
-                            setStatus('Ready to log incidents.', false);
-                            // Start listening for student roster updates
+                            // Start listening for student roster updates after the user is authenticated.
                             listenForStudentRoster();
                         } else {
+                            // If no user is authenticated, sign in with the provided token or anonymously.
                             if (initialAuthToken) {
                                 await signInWithCustomToken(auth, initialAuthToken);
                             } else {
@@ -271,7 +271,7 @@
 
         // Listen for real-time updates to the student roster
         function listenForStudentRoster() {
-            const rosterCollectionPath = `artifacts/${appId}/public/data/student_roster`; // Corrected path
+            const rosterCollectionPath = `artifacts/${appId}/public/data/student_roster`;
             try {
                 const q = query(collection(db, rosterCollectionPath));
                 onSnapshot(q, (snapshot) => {
@@ -287,10 +287,14 @@
                         studentRoster[grade].push({ name: studentName, grade: grade });
                     });
                     populateGradeAndStudentDropdowns();
+                    // Set the status to ready only after the initial roster data has been fetched.
+                    setStatus('Ready to log incidents.', false);
                     rosterStatusDiv.textContent = `Student roster updated.`;
                 }, (error) => {
                     console.error("Error fetching student roster:", error);
                     rosterStatusDiv.textContent = 'Failed to load student roster. See console for details.';
+                    setStatus('Failed to load roster.', false, true);
+                    showMessage('Failed to load student roster. Please see the console for details.');
                 });
             } catch(e) {
                 console.error("Error listening for student roster:", e);
