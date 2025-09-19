@@ -134,7 +134,7 @@
                     <input type="text" id="new-student-name" placeholder="e.g., Alex Johnson" required
                         class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2">
                 </div>
-                 <div>
+                <div>
                     <label for="new-student-grade" class="block text-sm font-medium text-gray-700">Grade</label>
                     <input type="text" id="new-student-grade" placeholder="e.g., 9 or 3A" required
                         class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2">
@@ -196,26 +196,6 @@
         let studentRoster = {};
         let lastReportData = null; // Store the last generated report data for export
 
-// Import the functions you need from the Firebase SDKs
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-  import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
-
-  // Your web app's Firebase configuration
-  const firebaseConfig = {
-    apiKey: "AIzaSyBoLyxLbzbB3-sWn6falFM379nDE8COzKs",
-    authDomain: "id-card-tracker-fb930.firebaseapp.com",
-    projectId: "id-card-tracker-fb930",
-    storageBucket: "id-card-tracker-fb930.firebasestorage.app",
-    messagingSenderId: "30632371312",
-    appId: "1:30632371312:web:e8519958b693c49edc80b5"
-  };
-
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
         // Initialize Firebase
         function initializeFirebase() {
             try {
@@ -258,7 +238,7 @@
 
         // Listen for real-time updates to the student roster
         function listenForStudentRoster() {
-            const rosterCollectionPath = `/artifacts/${appId}/public/data/student_roster`;
+            const rosterCollectionPath = `artifacts/${appId}/public/data/student_roster`; // Corrected path
             const q = query(collection(db, rosterCollectionPath));
             onSnapshot(q, (snapshot) => {
                 studentRoster = {};
@@ -355,7 +335,7 @@
                 grade: newStudentGrade,
             };
 
-            const collectionPath = `/artifacts/${appId}/public/data/student_roster`;
+            const collectionPath = `artifacts/${appId}/public/data/student_roster`; // Corrected path
             try {
                 if (!auth.currentUser) {
                     throw new Error("User not authenticated.");
@@ -380,7 +360,7 @@
             reader.onload = async (e) => {
                 const text = e.target.result;
                 const rows = text.split('\n').filter(row => row.trim() !== '');
-                const collectionPath = `/artifacts/${appId}/public/data/student_roster`;
+                const collectionPath = `artifacts/${appId}/public/data/student_roster`; // Corrected path
                 let uploadCount = 0;
 
                 for (const row of rows) {
@@ -426,7 +406,7 @@
                 timestamp: timestamp.toISOString()
             };
 
-            const collectionPath = `/artifacts/${appId}/public/data/forgotten_ids`;
+            const collectionPath = `artifacts/${appId}/public/data/forgotten_ids`; // Corrected path
 
             try {
                 if (!auth.currentUser) {
@@ -478,7 +458,7 @@
             endISO.setHours(23, 59, 59, 999);
             const endISOString = endISO.toISOString();
 
-            const collectionPath = `/artifacts/${appId}/public/data/forgotten_ids`;
+            const collectionPath = `artifacts/${appId}/public/data/forgotten_ids`; // Corrected path
 
             try {
                 const q = query(collection(db, collectionPath), where('timestamp', '>=', startISO), where('timestamp', '<=', endISOString));
