@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student ID Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .report-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .report-table th, .report-table td {
+            padding: 12px;
+            border-bottom: 1px solid #e5e7eb;
+            text-align: left;
+        }
+        .report-table th {
+            font-weight: 600;
+            background-color: #f9fafb;
+            color: #4b5563;
+        }
+        .report-table tr:last-child td {
+            border-bottom: none;
+        }
+        .report-table tr:hover {
+            background-color: #f3f4f6;
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center p-4 min-h-screen">
+
+    <div id="app" class="w-full max-w-4xl bg-white shadow-xl rounded-2xl p-6 md:p-8">
+        <h1 class="text-3xl md:text-4xl font-bold text-center text-gray-800 mb-6">Student ID Tracker</h1>
+        <p class="text-center text-gray-500 mb-8">Quickly log incidents of forgotten or lost student IDs.</p>
+
+        <!-- Loading and Status Message -->
+        <div id="status" class="text-center text-sm font-semibold text-gray-600 mb-4 transition-all duration-300">
+            <span id="loading-spinner" class="animate-spin inline-block h-4 w-4 rounded-full border-2 border-dashed border-blue-500 mr-2"></span>
+            <span id="status-message">Loading...</span>
+        </div>
+
+        <!-- User Info Display -->
+        <div id="user-info" class="text-center text-xs text-gray-500 mb-6 hidden">
+            <p>Your User ID: <span id="user-id" class="font-mono bg-gray-100 px-2 py-1 rounded-md text-gray-700"></span></p>
+            <p class="mt-2 text-gray-400">This ID is used for collaborative purposes with other teachers.</p>
+        </div>
+
+        <!-- Log Incident Section -->
+        <form id="log-form" class="space-y-4">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4 text-center">Log Incident</h2>
+            <div>
+                <label for="student-grade" class="block text-sm font-medium text-gray-700">Student Grade</label>
+                <select id="student-grade" name="student-grade" required disabled
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 transition-colors duration-200">
+                    <option value="" disabled selected>Select a grade...</option>
+                </select>
+            </div>
+            <div>
+                <label for="student-name" class="block text-sm font-medium text-gray-700">Student Name</label>
+                <select id="student-name" name="student-name" required disabled
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 transition-colors duration-200">
+                    <option value="" disabled selected>Select a student...</option>
+                </select>
+            </div>
+            <div>
+                <span class="text-sm font-medium text-gray-700">Incident Type</span>
+                <div class="mt-2 flex space-x-4">
+                    <div class="flex items-center">
+                        <input id="forgot" name="incident-type" type="radio" value="forgot" checked
+                            class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 transition-colors duration-200">
+                        <label for="forgot" class="ml-2 block text-sm text-gray-900">Forgot ID</label>
+                    </div>
+                    <div class="flex items-center">
+                        <input id="lost" name="incident-type" type="radio" value="lost"
+                            class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 transition-colors duration-200">
+                        <label for="lost" class="ml-2 block text-sm text-gray-900">Lost ID</label>
+                    </div>
+                </div>
+            </div>
+            <button type="submit" id="submit-button" disabled
+                class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-400 cursor-not-allowed transition-colors duration-200">
+                Log Incident
+            </button>
+        </form>
+
+        <div class="border-t border-gray-200 my-8"></div>
+
+        <!-- Summary and Report Section -->
+        <div class="flex flex-col items-center">
+            <h2 class="text-2xl md:text-3xl font-bold text-center text-gray-800 mb-4">Reports</h2>
+            <p class="text-center text-gray-500 mb-6">Select a date range and click the button below to generate a summary.</p>
+            <div class="w-full md:w-auto space-y-4 md:space-y-0 md:space-x-4 md:flex items-center justify-center">
+                <div class="flex items-center">
+                    <label for="start-date" class="mr-2 text-sm text-gray-700">From:</label>
+                    <input type="date" id="start-date" class="p-2 border rounded-md shadow-sm focus:ring focus:ring-green-200">
+                </div>
+                <div class="flex items-center">
+                    <label for="end-date" class="mr-2 text-sm text-gray-700">To:</label>
+                    <input type="date" id="end-date" class="p-2 border rounded-md shadow-sm focus:ring focus:ring-green-200">
+                </div>
+                <button id="generate-summary" disabled
+                    class="w-full md:w-auto flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-400 cursor-not-allowed transition-colors duration-200">
+                    Generate Report
+                </button>
+            </div>
+            <div id="summary-report" class="mt-6 w-full hidden">
+                <div class="bg-gray-50 rounded-lg p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-semibold text-gray-700">Incident Report Summary</h3>
+                        <button id="export-button" class="py-1 px-3 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-500 hover:bg-green-600 transition-colors duration-200">
+                            Export Report (CSV)
+                        </button>
+                    </div>
+                    <div id="summary-content" class="space-y-4"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="border-t border-gray-200 my-8"></div>
+
+        <!-- Manage Students and Classes Section (Moved to the bottom) -->
+        <div class="border border-gray-200 rounded-lg p-4 mb-8">
+            <h2 class="text-xl font-semibold mb-4 text-gray-700">Manage Student Roster</h2>
+            <p class="text-sm text-gray-500 mb-4">You can manually add a student or upload a CSV file with your entire roster. Your CSV file should have two columns: `studentName` and `grade`.</p>
+            <form id="add-student-form" class="space-y-4">
+                <div>
+                    <label for="new-student-name" class="block text-sm font-medium text-gray-700">Student Name</label>
+                    <input type="text" id="new-student-name" placeholder="e.g., Alex Johnson" required
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2">
+                </div>
+                 <div>
+                    <label for="new-student-grade" class="block text-sm font-medium text-gray-700">Grade</label>
+                    <input type="text" id="new-student-grade" placeholder="e.g., 9 or 3A" required
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2">
+                </div>
+                <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors duration-200">
+                    Add Student
+                </button>
+            </form>
+            <div class="border-t border-gray-200 my-4"></div>
+            <div class="space-y-2">
+                <label for="csv-upload" class="block text-sm font-medium text-gray-700">Upload Roster from CSV File</label>
+                <input type="file" id="csv-upload" accept=".csv" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition-colors duration-200">
+            </div>
+            <div id="roster-status" class="text-center text-xs text-gray-500 mt-2"></div>
+        </div>
+
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, addDoc, collection, query, where, getDocs, onSnapshot, getDoc, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Set log level to debug for detailed console output
+        setLogLevel('debug');
+
+        // Global variables provided by the Canvas environment
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        // UI Elements
+        const form = document.getElementById('log-form');
+        const submitButton = document.getElementById('submit-button');
+        const generateSummaryButton = document.getElementById('generate-summary');
+        const exportButton = document.getElementById('export-button');
+        const summaryReportDiv = document.getElementById('summary-report');
+        const summaryContentDiv = document.getElementById('summary-content');
+        const statusDiv = document.getElementById('status');
+        const loadingSpinner = document.getElementById('loading-spinner');
+        const statusMessage = document.getElementById('status-message');
+        const userInfoDiv = document.getElementById('user-info');
+        const userIdSpan = document.getElementById('user-id');
+        const studentGradeSelect = document.getElementById('student-grade');
+        const studentNameSelect = document.getElementById('student-name');
+        const startDateInput = document.getElementById('start-date');
+        const endDateInput = document.getElementById('end-date');
+
+        const addStudentForm = document.getElementById('add-student-form');
+        const newStudentNameInput = document.getElementById('new-student-name');
+        const newStudentGradeInput = document.getElementById('new-student-grade');
+        const csvUploadInput = document.getElementById('csv-upload');
+        const rosterStatusDiv = document.getElementById('roster-status');
+
+        let app, db, auth;
+        let userId = null;
+        let studentRoster = {};
+        let lastReportData = null; // Store the last generated report data for export
+
+        // Initialize Firebase
+        function initializeFirebase() {
+            try {
+                if (!app) {
+                    app = initializeApp(firebaseConfig);
+                    auth = getAuth(app);
+                    db = getFirestore(app);
+
+                    // Sign in with custom token or anonymously
+                    onAuthStateChanged(auth, async (user) => {
+                        if (user) {
+                            userId = user.uid;
+                            userInfoDiv.classList.remove('hidden');
+                            userIdSpan.textContent = userId;
+                            setStatus('Ready to log incidents.', false);
+                            // Start listening for student roster updates
+                            listenForStudentRoster();
+                        } else {
+                            if (initialAuthToken) {
+                                await signInWithCustomToken(auth, initialAuthToken);
+                            } else {
+                                await signInAnonymously(auth);
+                            }
+                        }
+                    });
+                }
+            } catch (e) {
+                console.error("Error initializing Firebase:", e);
+                setStatus('Failed to connect. Please try again.', false, true);
+            }
+        }
+
+        // Helper to update status UI
+        function setStatus(message, loading = true, error = false) {
+            statusMessage.textContent = message;
+            loadingSpinner.classList.toggle('hidden', !loading);
+            statusDiv.classList.toggle('text-red-600', error);
+            statusDiv.classList.toggle('text-gray-600', !error);
+        }
+
+        // Listen for real-time updates to the student roster
+        function listenForStudentRoster() {
+            const rosterCollectionPath = `/artifacts/${appId}/public/data/student_roster`;
+            const q = query(collection(db, rosterCollectionPath));
+            onSnapshot(q, (snapshot) => {
+                studentRoster = {};
+                snapshot.forEach((doc) => {
+                    const data = doc.data();
+                    const grade = data.grade || "Roster"; // Use grade as the primary grouping key
+                    const studentName = data.studentName;
+                    
+                    if (!studentRoster[grade]) {
+                        studentRoster[grade] = [];
+                    }
+                    studentRoster[grade].push({ name: studentName, grade: grade });
+                });
+                populateGradeAndStudentDropdowns();
+                rosterStatusDiv.textContent = `Student roster updated.`;
+            }, (error) => {
+                console.error("Error fetching student roster:", error);
+                rosterStatusDiv.textContent = 'Failed to load student roster. See console for details.';
+            });
+        }
+        
+        // Populate the student and grade dropdowns based on the live roster
+        function populateGradeAndStudentDropdowns() {
+            studentGradeSelect.innerHTML = '<option value="" disabled selected>Select a grade...</option>';
+            studentNameSelect.innerHTML = '<option value="" disabled selected>Select a student...</option>';
+            studentGradeSelect.disabled = true;
+            studentNameSelect.disabled = true;
+            submitButton.disabled = true;
+            submitButton.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+            submitButton.classList.add('bg-blue-400', 'cursor-not-allowed');
+
+            const grades = Object.keys(studentRoster).sort();
+            if (grades.length > 0) {
+                grades.forEach(grade => {
+                    const option = document.createElement('option');
+                    option.value = grade;
+                    option.textContent = grade;
+                    studentGradeSelect.appendChild(option);
+                });
+                studentGradeSelect.disabled = false;
+            }
+        }
+
+        // Handle grade dropdown change to populate student dropdown
+        studentGradeSelect.addEventListener('change', () => {
+            const selectedGrade = studentGradeSelect.value;
+            studentNameSelect.innerHTML = '<option value="" disabled selected>Select a student...</option>';
+            studentNameSelect.disabled = true;
+            submitButton.disabled = true;
+            submitButton.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+            submitButton.classList.add('bg-blue-400', 'cursor-not-allowed');
+
+            if (selectedGrade && studentRoster[selectedGrade]) {
+                const sortedStudents = studentRoster[selectedGrade].sort((a, b) => a.name.localeCompare(b.name));
+                sortedStudents.forEach(student => {
+                    const option = document.createElement('option');
+                    option.value = student.name;
+                    option.textContent = student.name;
+                    studentNameSelect.appendChild(option);
+                });
+                studentNameSelect.disabled = false;
+            }
+        });
+
+        
+        // Handle student dropdown change
+        studentNameSelect.addEventListener('change', () => {
+            if (studentNameSelect.value) {
+                submitButton.disabled = false;
+                submitButton.classList.remove('bg-blue-400', 'cursor-not-allowed');
+                submitButton.classList.add('bg-blue-600', 'hover:bg-blue-700');
+            } else {
+                submitButton.disabled = true;
+                submitButton.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+                submitButton.classList.add('bg-blue-400', 'cursor-not-allowed');
+            }
+        });
+
+        // Add Student form handler
+        addStudentForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            rosterStatusDiv.textContent = "Adding student...";
+            const newStudentName = newStudentNameInput.value.trim();
+            const newStudentGrade = newStudentGradeInput.value.trim();
+            
+            if (!newStudentName || !newStudentGrade) {
+                 rosterStatusDiv.textContent = "Please fill out all fields correctly.";
+                 return;
+            }
+
+            const studentDocData = {
+                className: newStudentGrade, // Storing grade as className
+                studentName: newStudentName,
+                grade: newStudentGrade,
+            };
+
+            const collectionPath = `/artifacts/${appId}/public/data/student_roster`;
+            try {
+                if (!auth.currentUser) {
+                    throw new Error("User not authenticated.");
+                }
+                await addDoc(collection(db, collectionPath), studentDocData);
+                rosterStatusDiv.textContent = "Student added successfully!";
+                addStudentForm.reset();
+            } catch (error) {
+                console.error("Error adding student:", error);
+                rosterStatusDiv.textContent = 'Failed to add student. See console for details.';
+            }
+        });
+
+        // CSV Upload Handler
+        csvUploadInput.addEventListener('change', async (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            rosterStatusDiv.textContent = "Uploading and parsing file...";
+            const reader = new FileReader();
+
+            reader.onload = async (e) => {
+                const text = e.target.result;
+                const rows = text.split('\n').filter(row => row.trim() !== '');
+                const collectionPath = `/artifacts/${appId}/public/data/student_roster`;
+                let uploadCount = 0;
+
+                for (const row of rows) {
+                    const [studentName, grade] = row.split(',').map(item => item.trim());
+                    if (studentName && grade) {
+                        const studentDocData = {
+                            className: grade, // Storing grade as className
+                            studentName: studentName,
+                            grade: grade,
+                        };
+                        try {
+                            if (!auth.currentUser) {
+                                throw new Error("User not authenticated.");
+                            }
+                            await addDoc(collection(db, collectionPath), studentDocData);
+                            uploadCount++;
+                        } catch (error) {
+                            console.error("Error adding student from CSV:", error);
+                        }
+                    }
+                }
+                rosterStatusDiv.textContent = `Finished uploading. Added ${uploadCount} students from CSV.`;
+                csvUploadInput.value = ''; // Reset file input
+            };
+
+            reader.readAsText(file);
+        });
+
+
+        // Log form submission handler
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            setStatus('Logging incident...');
+
+            const studentName = studentNameSelect.value;
+            const incidentType = document.querySelector('input[name="incident-type"]:checked').value;
+            const timestamp = new Date();
+
+            const docData = {
+                studentName,
+                className: studentGradeSelect.value, // This is correctly storing the selected grade
+                status: incidentType,
+                timestamp: timestamp.toISOString()
+            };
+
+            const collectionPath = `/artifacts/${appId}/public/data/forgotten_ids`;
+
+            try {
+                if (!auth.currentUser) {
+                    throw new Error("User not authenticated.");
+                }
+                await addDoc(collection(db, collectionPath), docData);
+                setStatus('Incident logged successfully!', false);
+                form.reset();
+                populateGradeAndStudentDropdowns();
+            } catch (error) {
+                console.error("Error logging incident:", error);
+                setStatus('Failed to log incident. See console for details.', false, true);
+            }
+        });
+
+        // Enable/disable the generate report button based on date inputs
+        function checkDateInputs() {
+            if (startDateInput.value && endDateInput.value) {
+                generateSummaryButton.disabled = false;
+                generateSummaryButton.classList.remove('bg-green-400', 'cursor-not-allowed');
+                generateSummaryButton.classList.add('bg-green-600', 'hover:bg-green-700');
+            } else {
+                generateSummaryButton.disabled = true;
+                generateSummaryButton.classList.remove('bg-green-600', 'hover:bg-green-700');
+                generateSummaryButton.classList.add('bg-green-400', 'cursor-not-allowed');
+            }
+        }
+
+        startDateInput.addEventListener('change', checkDateInputs);
+        endDateInput.addEventListener('change', checkDateInputs);
+
+        // Generate weekly summary handler
+        generateSummaryButton.addEventListener('click', async () => {
+            const startDate = startDateInput.value;
+            const endDate = endDateInput.value;
+
+            if (!startDate || !endDate) {
+                setStatus('Please select both start and end dates.', false, true);
+                return;
+            }
+
+            setStatus('Generating summary...', true);
+            summaryContentDiv.innerHTML = '';
+            summaryReportDiv.classList.add('hidden');
+            exportButton.classList.add('hidden');
+
+            const startISO = new Date(startDate).toISOString();
+            const endISO = new Date(endDate);
+            endISO.setHours(23, 59, 59, 999);
+            const endISOString = endISO.toISOString();
+
+            const collectionPath = `/artifacts/${appId}/public/data/forgotten_ids`;
+
+            try {
+                const q = query(collection(db, collectionPath), where('timestamp', '>=', startISO), where('timestamp', '<=', endISOString));
+                const querySnapshot = await getDocs(q);
+
+                const studentIncidents = {};
+                let totalForgot = 0;
+                let totalLost = 0;
+
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    const studentName = data.studentName;
+                    const grade = data.className;
+                    const status = data.status;
+
+                    if (!studentIncidents[studentName]) {
+                        studentIncidents[studentName] = {
+                            name: studentName,
+                            grade: grade,
+                            forgot: 0,
+                            lost: 0
+                        };
+                    }
+
+                    if (status === 'forgot') {
+                        studentIncidents[studentName].forgot++;
+                        totalForgot++;
+                    } else if (status === 'lost') {
+                        studentIncidents[studentName].lost++;
+                        totalLost++;
+                    }
+                });
+                
+                // Convert the object to an array for sorting
+                const sortedStudents = Object.values(studentIncidents).sort((a, b) => a.name.localeCompare(b.name));
+                
+                lastReportData = sortedStudents; // Store the sorted data for export
+
+                // Render the report
+                let reportHtml = `<h3 class="text-lg font-semibold text-gray-800 mb-4">Report for ${startDate} to ${endDate}</h3>`;
+                reportHtml += `<p class="mb-2">Total 'Forgot ID' incidents: <span class="font-bold">${totalForgot}</span></p>`;
+                reportHtml += `<p class="mb-4">Total 'Lost ID' incidents: <span class="font-bold">${totalLost}</span></p>`;
+
+                if (sortedStudents.length === 0) {
+                    reportHtml += `<p class="text-gray-500 italic">No incidents recorded in the selected date range.</p>`;
+                } else {
+                    reportHtml += `<table class="report-table mt-4"><thead><tr><th>Student Name</th><th>Grade</th><th>Total Forgot</th><th>Total Lost</th></tr></thead><tbody>`;
+
+                    sortedStudents.forEach(student => {
+                        reportHtml += `<tr><td>${student.name}</td><td>${student.grade}</td><td>${student.forgot}</td><td>${student.lost}</td></tr>`;
+                    });
+
+                    reportHtml += `</tbody></table>`;
+                }
+                
+                summaryContentDiv.innerHTML = reportHtml;
+                summaryReportDiv.classList.remove('hidden');
+                exportButton.classList.remove('hidden'); // Show the export button
+                setStatus('Summary generated.', false);
+
+            } catch (error) {
+                console.error("Error generating summary:", error);
+                setStatus('Failed to generate summary. See console for details.', false, true);
+            }
+        });
+
+        // Export report to CSV
+        exportButton.addEventListener('click', () => {
+            if (!lastReportData) {
+                setStatus('No report data to export. Generate a report first.', false, true);
+                return;
+            }
+
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += "Student Name,Grade,Total Forgot,Total Lost\n";
+
+            lastReportData.forEach(student => {
+                const row = [
+                    student.name,
+                    student.grade,
+                    student.forgot,
+                    student.lost
+                ].map(item => `"${item}"`).join(',');
+                csvContent += row + "\n";
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `incident_report_${startDateInput.value}_to_${endDateInput.value}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+
+        // Initialize on window load
+        window.onload = () => {
+            initializeFirebase();
+        };
+    </script>
+</body>
+</html>
