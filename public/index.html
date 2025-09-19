@@ -31,6 +31,19 @@
         .report-table tr:hover {
             background-color: #f3f4f6;
         }
+        /* Custom spinner for loading state */
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid #fff;
+            border-radius: 50%;
+            width: 1rem;
+            height: 1rem;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body class="flex flex-col items-center p-4 min-h-screen">
@@ -41,13 +54,21 @@
 
         <!-- Loading and Status Message -->
         <div id="status" class="text-center text-sm font-semibold text-gray-600 mb-4 transition-all duration-300">
-            <span id="loading-spinner" class="animate-spin inline-block h-4 w-4 rounded-full border-2 border-dashed border-blue-500 mr-2"></span>
+            <span id="loading-spinner" class="animate-spin inline-block h-4 w-4 rounded-full border-2 border-dashed border-blue-500 mr-2 hidden"></span>
             <span id="status-message">Loading...</span>
+        </div>
+        
+        <!-- UI Message Box -->
+        <div id="message-box" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
+            <div class="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full">
+                <p id="message-content" class="text-center text-lg font-semibold text-gray-800 mb-4"></p>
+                <button id="message-ok-button" class="w-full bg-blue-600 text-white rounded-lg py-2 hover:bg-blue-700 transition-colors">OK</button>
+            </div>
         </div>
 
         <!-- User Info Display -->
         <div id="user-info" class="text-center text-xs text-gray-500 mb-6 hidden">
-            <p>Your User ID: <span id="user-id" class="font-mono bg-gray-100 px-2 py-1 rounded-md text-gray-700"></span></p>
+            <p>Your User ID: <span id="user-id" class="font-mono bg-gray-100 px-2 py-1 rounded-md text-gray-700 break-all"></span></p>
             <p class="mt-2 text-gray-400">This ID is used for collaborative purposes with other teachers.</p>
         </div>
 
@@ -150,7 +171,6 @@
             </div>
             <div id="roster-status" class="text-center text-xs text-gray-500 mt-2"></div>
         </div>
-
     </div>
 
     <!-- Firebase SDKs -->
@@ -184,36 +204,30 @@
         const studentNameSelect = document.getElementById('student-name');
         const startDateInput = document.getElementById('start-date');
         const endDateInput = document.getElementById('end-date');
-
         const addStudentForm = document.getElementById('add-student-form');
         const newStudentNameInput = document.getElementById('new-student-name');
         const newStudentGradeInput = document.getElementById('new-student-grade');
         const csvUploadInput = document.getElementById('csv-upload');
         const rosterStatusDiv = document.getElementById('roster-status');
+        const messageBox = document.getElementById('message-box');
+        const messageContent = document.getElementById('message-content');
+        const messageOkButton = document.getElementById('message-ok-button');
 
         let app, db, auth;
         let userId = null;
         let studentRoster = {};
         let lastReportData = null; // Store the last generated report data for export
+        
+        // Custom message box to replace alerts
+        function showMessage(message) {
+            messageContent.textContent = message;
+            messageBox.classList.remove('hidden');
+        }
 
-        // Import the functions you need from the Firebase SDKs
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-  import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        messageOkButton.addEventListener('click', () => {
+            messageBox.classList.add('hidden');
+        });
 
-  // Your web app's Firebase configuration
-  // You must copy this code from your Firebase Console.
-const firebaseConfig = {
-  apiKey: "AIzaSyBoLyxLbzbB3-sWn6falFM379nDE8COzKs",
-  authDomain: "id-card-tracker-fb930.firebaseapp.com",
-  projectId: "id-card-tracker-fb930",
-  storageBucket: "id-card-tracker-fb930.firebasestorage.app",
-  messagingSenderId: "30632371312",
-  appId: "1:30632371312:web:e8519958b693c49edc80b5"
-};
-
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
         // Initialize Firebase
         function initializeFirebase() {
             try {
@@ -243,6 +257,7 @@ const firebaseConfig = {
             } catch (e) {
                 console.error("Error initializing Firebase:", e);
                 setStatus('Failed to connect. Please try again.', false, true);
+                showMessage('Failed to connect to the database. Please check the console for details.');
             }
         }
 
@@ -257,25 +272,30 @@ const firebaseConfig = {
         // Listen for real-time updates to the student roster
         function listenForStudentRoster() {
             const rosterCollectionPath = `artifacts/${appId}/public/data/student_roster`; // Corrected path
-            const q = query(collection(db, rosterCollectionPath));
-            onSnapshot(q, (snapshot) => {
-                studentRoster = {};
-                snapshot.forEach((doc) => {
-                    const data = doc.data();
-                    const grade = data.grade || "Roster"; // Use grade as the primary grouping key
-                    const studentName = data.studentName;
-                    
-                    if (!studentRoster[grade]) {
-                        studentRoster[grade] = [];
-                    }
-                    studentRoster[grade].push({ name: studentName, grade: grade });
+            try {
+                const q = query(collection(db, rosterCollectionPath));
+                onSnapshot(q, (snapshot) => {
+                    studentRoster = {};
+                    snapshot.forEach((doc) => {
+                        const data = doc.data();
+                        const grade = data.grade || "Roster"; // Use grade as the primary grouping key
+                        const studentName = data.studentName;
+                        
+                        if (!studentRoster[grade]) {
+                            studentRoster[grade] = [];
+                        }
+                        studentRoster[grade].push({ name: studentName, grade: grade });
+                    });
+                    populateGradeAndStudentDropdowns();
+                    rosterStatusDiv.textContent = `Student roster updated.`;
+                }, (error) => {
+                    console.error("Error fetching student roster:", error);
+                    rosterStatusDiv.textContent = 'Failed to load student roster. See console for details.';
                 });
-                populateGradeAndStudentDropdowns();
-                rosterStatusDiv.textContent = `Student roster updated.`;
-            }, (error) => {
-                console.error("Error fetching student roster:", error);
+            } catch(e) {
+                console.error("Error listening for student roster:", e);
                 rosterStatusDiv.textContent = 'Failed to load student roster. See console for details.';
-            });
+            }
         }
         
         // Populate the student and grade dropdowns based on the live roster
@@ -437,6 +457,7 @@ const firebaseConfig = {
             } catch (error) {
                 console.error("Error logging incident:", error);
                 setStatus('Failed to log incident. See console for details.', false, true);
+                showMessage('Failed to log incident. Please see the console for details.');
             }
         });
 
@@ -540,6 +561,7 @@ const firebaseConfig = {
             } catch (error) {
                 console.error("Error generating summary:", error);
                 setStatus('Failed to generate summary. See console for details.', false, true);
+                showMessage('Failed to generate a report. Please see the console for details.');
             }
         });
 
@@ -547,6 +569,7 @@ const firebaseConfig = {
         exportButton.addEventListener('click', () => {
             if (!lastReportData) {
                 setStatus('No report data to export. Generate a report first.', false, true);
+                showMessage('No report data to export. Please generate a report first.');
                 return;
             }
 
