@@ -229,6 +229,15 @@
 
         // Initialize Firebase
         function initializeFirebase() {
+            // Check if the Firebase config is valid before proceeding
+            if (!firebaseConfig.apiKey || !firebaseConfig.projectId || !firebaseConfig.authDomain) {
+                const errorMessage = 'Firebase configuration is missing or invalid. Please ensure the environment provides a valid config.';
+                console.error(errorMessage, firebaseConfig);
+                setStatus(errorMessage, false, true);
+                showMessage(errorMessage);
+                return;
+            }
+
             try {
                 if (!app) {
                     app = initializeApp(firebaseConfig);
