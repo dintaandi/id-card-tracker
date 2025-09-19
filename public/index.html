@@ -177,19 +177,9 @@
         // Set log level for debugging
         setLogLevel('debug');
 
-        // This is a placeholder for your Firebase config.
-        // The actual config is provided by the environment, but for testing, you can put it here.
-        // DO NOT COMMIT YOUR REAL API KEY AND PROJECT DETAILS TO A PUBLIC REPO.
-        const firebaseConfig = {
-            apiKey: "AIzaSyBoLyxLbzbB3-sWn6falFM379nDE8COzKs",
-            authDomain: "id-card-tracker-fb930.firebaseapp.com",
-            projectId: "id-card-tracker-fb930",
-            storageBucket: "id-card-tracker-fb930.firebasestorage.app",
-            messagingSenderId: "30632371312",
-            appId: "1:30632371312:web:e8519958b693c49edc80b5"
-        };
-        const __firebase_config = JSON.stringify(firebaseConfig);
-        const __initial_auth_token = "placeholder_token"; // Replace with your token for testing
+        // These variables are provided by the environment, not defined here.
+        // const __firebase_config;
+        // const __initial_auth_token;
 
         let app;
         let db;
@@ -558,7 +548,7 @@
             }
         });
 
-        // Initialize the app on window load aaa
+        // Initialize the app on window load
         window.onload = initializeFirebase;
     </script>
 </body>
