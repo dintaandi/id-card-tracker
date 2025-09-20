@@ -177,9 +177,10 @@
         // Set log level for debugging
         setLogLevel('debug');
 
-        // These variables are provided by the environment, not defined here.
-        // const __firebase_config;
-        // const __initial_auth_token;
+        // Declare the environment variables to ensure they are available
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
         let app;
         let db;
@@ -223,11 +224,10 @@
         // Function to initialize Firebase
         async function initializeFirebase() {
             try {
-                if (typeof __firebase_config === 'undefined' || !__firebase_config) {
+                if (!firebaseConfig) {
                     throw new Error("Firebase configuration is missing or invalid. Please ensure the environment provides a valid config.");
                 }
 
-                const firebaseConfig = JSON.parse(__firebase_config);
                 app = initializeApp(firebaseConfig);
                 auth = getAuth(app);
                 db = getFirestore(app);
@@ -245,20 +245,8 @@
                         
                     } else {
                         if (!authAttempted) {
-                            console.log("No user signed in, attempting to sign in.");
-                            try {
-                                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                                    await signInWithCustomToken(auth, __initial_auth_token);
-                                    console.log("Signed in with custom token.");
-                                } else {
-                                    await signInAnonymously(auth);
-                                    console.log("Signed in anonymously.");
-                                }
-                            } catch (e) {
-                                console.error("Authentication failed:", e);
-                                loadingOverlay.classList.add('hidden');
-                                showModal(`Authentication failed. Please check the console for details.`);
-                            }
+                            console.log("No user signed in, attempting to sign in with custom token...");
+                            await signInWithRetry(initialAuthToken, 3, 1000);
                             authAttempted = true;
                         }
                     }
@@ -270,16 +258,50 @@
                 showModal("Failed to connect to the database. Please check the console for details.");
             }
         }
+        
+        async function signInWithRetry(token, maxRetries, delay) {
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    if (token) {
+                        await signInWithCustomToken(auth, token);
+                        console.log("Signed in with custom token.");
+                        return; // Exit on success
+                    }
+                } catch (e) {
+                    if (e.code === 'auth/network-request-failed' && i < maxRetries - 1) {
+                        console.error(`Authentication failed (attempt ${i + 1}/${maxRetries}):`, e);
+                        console.log(`Retrying in ${delay}ms...`);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        delay *= 2; // Exponential backoff
+                    } else {
+                        console.error("Authentication failed:", e);
+                        loadingOverlay.classList.add('hidden');
+                        showModal(`Authentication failed. Please check the console for details.`);
+                        break;
+                    }
+                }
+            }
+            // Fallback to anonymous sign-in if custom token fails after retries
+            try {
+                if (!auth.currentUser) {
+                    console.log("Custom token failed, falling back to anonymous sign-in.");
+                    await signInAnonymously(auth);
+                    console.log("Signed in anonymously.");
+                }
+            } catch (e) {
+                console.error("Anonymous sign-in failed:", e);
+                loadingOverlay.classList.add('hidden');
+                showModal(`Failed to sign in anonymously. Please check the console.`);
+            }
+        }
 
         // Get the current path for storing private data
         function getUserRosterPath() {
-            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
             return `/artifacts/${appId}/users/${userId}/roster`;
         }
         
         // Get the current path for storing public data
         function getIncidentLogPath() {
-             const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
              return `/artifacts/${appId}/public/data/incidents`;
         }
 
